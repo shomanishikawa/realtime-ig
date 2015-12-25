@@ -1,30 +1,71 @@
-var express = require('express');
-var path = require('path');
-var webpack = require('webpack');
-var app = express();
+import express from 'express'
+import http from 'http'
+import socketio from 'socket.io'
+import bodyParser from 'body-parser'
+import Instagram from 'instagram-node-lib'
+import dotenv from 'dotenv'
 
-var isDevelopment = (process.env.NODE_ENV !== 'production');
-var static_path = path.join(__dirname, 'public');
+let port = process.env.PORT || 8080;
+let static_path = './dist';
+let app = express();
+let server = http.Server(app);
+let io = socketio(server);
 
-app.use(express.static(static_path))
-  .get('/', function (req, res) {
-    res.sendFile('index.html', {
-      root: static_path
-    });
-  }).listen(process.env.PORT || 8080, function (err) {
-    if (err) { console.log(err) };
-    console.log('Listening at localhost:8080');
+dotenv.load();
+
+Instagram.set('client_id', process.env.CLIENT_ID);
+Instagram.set('client_secret', process.env.CLIENT_SECRET);
+Instagram.set('callback_url', process.env.CALLBACK_URL);
+Instagram.set('redirect_uri', process.env.REDIRECT_URI);
+Instagram.set('access_token', process.env.ACCESS_TOKEN);
+Instagram.set('maxSockets', 10);
+
+// Instagram.tags.subscribe({
+//   object: 'tag',
+//   object_id: 'catsofinstagram',
+//   aspect: 'media',
+//   callback_url: process.env.CALLBACK_URL,
+//   type: 'subscription'
+// });
+
+Instagram.tags.info({
+  name: 'blue',
+  complete: function(data){
+    console.log(data);
+  }
+});
+
+app.use(express.static(static_path));
+app.use(bodyParser.json());
+
+app.get('/', (req, res) => {
+  res.sendFile('index.html', {
+    root: static_path
+  })
+});
+
+app.get('/gimmecats', (req, res) => {
+  Instagram.subscriptions.handshake(req, res);
+});
+
+app.post('/gimmecats', (req, res) => {
+  res.send();
+  Instagram.tags.recent({
+    name: req.body[0].object_id,
+    complete: (data) => {
+      io.sockets.emit('cats', { cat: data } );
+    }
   });
+});
 
-if (isDevelopment) {
-  var config = require('./webpack.config');
-  var WebpackDevServer = require('webpack-dev-server');
+// io.sockets.on('connection', function (socket) {
+//   Instagram.tags.recent({ 
+//       name: 'lollapalooza',
+//       complete: function(data) {
+//         socket.emit('firstShow', { firstShow: data });
+//       }
+//   });
+// });
 
-  new WebpackDevServer(webpack(config), {
-    publicPath: config.output.publicPath,
-    hot: true
-  }).listen(3000, 'localhost', function (err, result) {
-    if (err) { console.log(err) }
-    console.log('Listening at localhost:3000');
-  });
-}
+server.listen(port);
+console.log('Listening ...');

@@ -1,4 +1,4 @@
-# react-webpack-boilerplate
+# realtime ig w react/webpack
 
 ```
 $ npm install
@@ -7,6 +7,7 @@ $ npm start
 ```
 
 # instagram API
+  * create `.env` file with:
 ```
 CLIENT_ID=YOUR_CLIENT_ID
 CLIENT_SECRET=YOUR_CLIENT_SECRET
